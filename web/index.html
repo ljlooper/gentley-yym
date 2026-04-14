@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>医院小组排班系统</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <div class="site-header__brand">
+        <span class="site-header__logo" aria-hidden="true">班</span>
+        <div>
+          <h1 class="site-header__title">医院小组排班系统</h1>
+          <p class="site-header__subtitle">单机版 · 自动排班 · 配置与结果一目了然</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="page">
+    <main class="main-grid">
+      <section class="card card--accent">
+        <h2 class="card__title">基础配置</h2>
+        <p class="card__hint">先建立小组，再在同一小组下维护员工与岗位。</p>
+
+        <div class="row row--actions">
+          <label class="field">
+            <span class="field__label">小组名称</span>
+            <input id="groupName" type="text" placeholder="如：生化免疫组" />
+          </label>
+          <label class="field">
+            <span class="field__label">科室名称</span>
+            <input id="deptName" type="text" placeholder="科室" />
+          </label>
+          <div class="field field--btn">
+            <span class="field__label field__label--invisible">操作</span>
+            <button type="button" class="btn btn--primary" onclick="createGroup()">新增小组</button>
+          </div>
+        </div>
+
+        <div class="row row--actions">
+          <label class="field">
+            <span class="field__label">当前小组</span>
+            <select id="groupSelect"></select>
+          </label>
+          <label class="field">
+            <span class="field__label">员工姓名</span>
+            <input id="employeeName" type="text" placeholder="姓名" />
+          </label>
+          <label class="field">
+            <span class="field__label">角色</span>
+            <select id="employeeRole">
+              <option value="formal">正式员工</option>
+              <option value="tech_support">技术支持</option>
+              <option value="mobile">机动员工</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="field__label">细分</span>
+            <input id="employeeCategory" type="text" placeholder="生化 / 免疫 等" />
+          </label>
+          <label class="field field--checkbox">
+            <span class="field__label">夜班</span>
+            <span class="checkbox-wrap">
+              <input id="canNight" type="checkbox" checked />
+              <span>可夜班</span>
+            </span>
+          </label>
+          <div class="field field--btn">
+            <span class="field__label field__label--invisible">操作</span>
+            <button type="button" class="btn btn--primary" onclick="createEmployee()">新增员工</button>
+          </div>
+        </div>
+
+        <div class="row row--actions">
+          <label class="field">
+            <span class="field__label">岗位名称</span>
+            <input id="postName" type="text" placeholder="如 A1 / A2" />
+          </label>
+          <label class="field field--narrow">
+            <span class="field__label">需求人数</span>
+            <input id="postRequired" type="number" value="1" min="1" />
+          </label>
+          <label class="field field--narrow">
+            <span class="field__label">优先级</span>
+            <input id="postPriority" type="number" value="100" min="1" />
+          </label>
+          <div class="field field--btn">
+            <span class="field__label field__label--invisible">操作</span>
+            <button type="button" class="btn btn--secondary" onclick="createPost()">新增岗位</button>
+          </div>
+        </div>
+      </section>
+
+      <div class="two-col">
+        <section class="card">
+          <h2 class="card__title">夜班导入</h2>
+          <div class="row row--actions">
+            <label class="field">
+              <span class="field__label">月份</span>
+              <input id="monthNight" type="text" placeholder="YYYY-MM" />
+            </label>
+            <label class="field field--file">
+              <span class="field__label">Excel 文件</span>
+              <input id="nightFile" type="file" accept=".xlsx,.xls" />
+            </label>
+            <div class="field field--btn">
+              <span class="field__label field__label--invisible">操作</span>
+              <button type="button" class="btn btn--primary" onclick="importNight()">导入夜班表</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2 class="card__title">月度休息规则</h2>
+          <div class="row row--actions">
+            <label class="field">
+              <span class="field__label">月份</span>
+              <input id="monthConstraint" type="text" placeholder="YYYY-MM" />
+            </label>
+            <label class="field">
+              <span class="field__label">角色</span>
+              <select id="constraintRole">
+                <option value="formal">正式员工</option>
+                <option value="tech_support">技术支持</option>
+                <option value="mobile">机动员工</option>
+              </select>
+            </label>
+            <label class="field field--narrow">
+              <span class="field__label">休息天数目标</span>
+              <input id="constraintRestDays" type="number" min="0" value="8" />
+            </label>
+            <div class="field field--btn">
+              <span class="field__label field__label--invisible">操作</span>
+              <button type="button" class="btn btn--secondary" onclick="saveConstraint()">保存休息目标</button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section class="card">
+        <h2 class="card__title">特殊班种规则</h2>
+        <div class="row row--actions">
+          <label class="field">
+            <span class="field__label">规则类型</span>
+            <select id="ruleType">
+              <option value="date">按日期</option>
+              <option value="weekday">按星期</option>
+            </select>
+          </label>
+          <label class="field field--narrow">
+            <span class="field__label">日期 (1–31)</span>
+            <input id="ruleDayOfMonth" type="number" min="1" max="31" placeholder="日" />
+          </label>
+          <label class="field field--narrow">
+            <span class="field__label">星期 (0–6)</span>
+            <input id="ruleWeekday" type="number" min="0" max="6" placeholder="0=周日" />
+          </label>
+          <label class="field">
+            <span class="field__label">岗位名</span>
+            <input id="rulePostName" type="text" placeholder="岗位" />
+          </label>
+          <label class="field field--narrow">
+            <span class="field__label">需求人数</span>
+            <input id="ruleRequired" type="number" min="1" value="1" />
+          </label>
+          <div class="field field--btn">
+            <span class="field__label field__label--invisible">操作</span>
+            <button type="button" class="btn btn--secondary" onclick="createRule()">保存规则</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card card--highlight">
+        <h2 class="card__title">生成与导出</h2>
+        <div class="row row--actions row--toolbar">
+          <label class="field">
+            <span class="field__label">排班月份</span>
+            <input id="monthSchedule" type="text" placeholder="YYYY-MM" />
+          </label>
+          <div class="field field--btn field--btn-group">
+            <span class="field__label field__label--invisible">操作</span>
+            <div class="btn-group">
+              <button type="button" class="btn btn--primary" onclick="generateSchedule()">生成排班</button>
+              <button type="button" class="btn btn--ghost" onclick="loadSchedule()">查询排班</button>
+              <button type="button" class="btn btn--accent" onclick="exportSchedule()">导出 Excel</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="card__title">员工列表</h2>
+        <div class="table-wrap">
+          <table id="employeeTable" class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>姓名</th>
+                <th>角色</th>
+                <th>分组</th>
+                <th>可夜班</th>
+                <th class="col-actions">操作</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="card__title">排班结果</h2>
+        <div class="table-wrap table-wrap--tall">
+          <table id="scheduleTable" class="data-table">
+            <thead>
+              <tr>
+                <th>日期</th>
+                <th>员工</th>
+                <th>班次</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
