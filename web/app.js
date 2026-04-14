@@ -1,11 +1,6 @@
-const ROLE_LABELS = {
-  formal: "正式员工",
-  tech_support: "技术支持",
-  mobile: "机动员工"
-};
-
 const state = {
   groups: [],
+  roles: [],
   employees: [],
   specialties: [],
   posts: [],
@@ -98,6 +93,11 @@ function populateSelect(selectId, options, placeholder, valueKey = "value", labe
 
 function refreshEmployeeRelatedSelects() {
   populateSelect(
+    "employeeRole",
+    state.roles.map((item) => ({ value: item.name, label: item.name })),
+    "请选择角色"
+  );
+  populateSelect(
     "employeeCategory",
     state.specialties.map((item) => ({ value: item.name, label: item.name })),
     "未设置专业方向"
@@ -123,6 +123,19 @@ function updateRuleTypeFields() {
 function updateRuleEmployeeMode() {
   const hasEmployee = Number(document.getElementById("ruleEmployeeId").value || 0) > 0;
   document.getElementById("ruleRequiredField").style.display = hasEmployee ? "none" : "";
+}
+
+function renderConstraintRoleInputs(existingByRole = {}) {
+  const container = document.getElementById("constraintDynamicInputs");
+  if (!container) return;
+  container.innerHTML = state.roles.map((role) => {
+    const value = existingByRole[role.name] ?? 5;
+    return `
+      <label class="field field--narrow">
+        <span class="field__label">${role.name}休息目标</span>
+        <input type="number" min="0" value="${value}" data-role-name="${role.name}" class="constraint-role-input" />
+      </label>`;
+  }).join("");
 }
 
 function syncMonths(sourceId) {
@@ -175,12 +188,14 @@ async function loadGroups() {
 async function refreshBaseData() {
   const gid = selectedGroupId();
   if (!gid) {
+    state.roles = [];
     state.employees = [];
     state.specialties = [];
     state.posts = [];
     state.rules = [];
     state.constraints = [];
     state.nightShifts = [];
+    renderRoles();
     renderEmployees();
     renderSpecialties();
     renderPosts();
@@ -193,6 +208,7 @@ async function refreshBaseData() {
   }
   await Promise.all([
     loadEmployees(),
+    loadRoles(),
     loadSpecialties(),
     loadPosts(),
     loadRules(),
@@ -220,7 +236,6 @@ async function createGroup() {
     await loadGroups();
     document.getElementById("groupSelect").value = String(created.id);
     await refreshBaseData();
-    alert("新增小组成功");
   } catch (e) {
     alert(e.message);
   }
@@ -229,9 +244,13 @@ async function createGroup() {
 async function createEmployee() {
   try {
     const gid = ensureGroupSelected();
+    const role = document.getElementById("employeeRole").value;
     const name = document.getElementById("employeeName").value.trim();
     if (!name) {
       throw new Error("请填写员工姓名");
+    }
+    if (!role) {
+      throw new Error("请先选择角色");
     }
     await api("/employees", {
       method: "POST",
@@ -239,7 +258,7 @@ async function createEmployee() {
       body: JSON.stringify({
         groupId: gid,
         name,
-        role: document.getElementById("employeeRole").value,
+        role,
         category: document.getElementById("employeeCategory").value,
         canNight: document.getElementById("canNight").checked,
         active: true
@@ -247,74 +266,58 @@ async function createEmployee() {
     });
     await loadEmployees();
     renderSummary();
-    alert("新增员工成功");
   } catch (e) {
     alert(e.message);
   }
 }
 
-function parseBool(value) {
-  const v = String(value || "").trim().toLowerCase();
-  return v === "1" || v === "true" || v === "yes" || v === "y" || v === "是";
-}
-
-async function createEmployeesBatch() {
+async function createRole() {
   try {
     const gid = ensureGroupSelected();
-    const raw = document.getElementById("employeeBatch").value.trim();
-    if (!raw) {
-      throw new Error("请先输入批量员工数据");
-    }
-    const lines = raw.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-    if (!lines.length) {
-      throw new Error("未识别到有效行");
-    }
-
-    let success = 0;
-    const errors = [];
-    const role = document.getElementById("employeeRole").value;
-    const category = document.getElementById("employeeCategory").value;
-    const canNight = document.getElementById("canNight").checked;
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const name = line;
-      if (!name) {
-        errors.push(`第${i + 1}行姓名为空`);
-        continue;
-      }
-      try {
-        await api("/employees", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            groupId: gid,
-            name,
-            role,
-            category,
-            canNight,
-            active: true
-          })
-        });
-        success++;
-      } catch (e) {
-        errors.push(`第${i + 1}行失败: ${e.message}`);
-      }
-    }
-
-    await loadEmployees();
-    renderSummary();
-
-    let msg = `批量新增完成：成功 ${success} 条`;
-    if (errors.length) {
-      msg += `，失败 ${errors.length} 条\n` + errors.slice(0, 6).join("\n");
-      if (errors.length > 6) msg += `\n... 其余 ${errors.length - 6} 条请检查输入格式`;
-    } else {
-      document.getElementById("employeeBatch").value = "";
-    }
-    alert(msg);
+    const name = document.getElementById("roleName").value.trim();
+    if (!name) throw new Error("请填写角色名称");
+    await api("/roles", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ groupId: gid, name })
+    });
+    document.getElementById("roleName").value = "";
+    await loadRoles();
   } catch (e) {
     alert(e.message);
   }
+}
+
+async function deleteRole(id) {
+  if (!confirm("确定删除该角色吗？")) return;
+  await api(`/roles/${id}`, { method: "DELETE" });
+  await loadRoles();
+}
+
+async function loadRoles() {
+  try {
+    const gid = selectedGroupId();
+    state.roles = gid ? await api(`/roles?groupId=${gid}`) : [];
+    renderRoles();
+    refreshEmployeeRelatedSelects();
+    renderConstraintRoleInputs();
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+function renderRoles() {
+  const tbody = document.querySelector("#roleTable tbody");
+  if (!tbody) return;
+  if (!state.roles.length) {
+    tbody.innerHTML = renderEmptyRow(2, "当前小组暂无角色配置");
+    return;
+  }
+  tbody.innerHTML = state.roles.map((role) => `
+    <tr>
+      <td>${role.name}</td>
+      <td><button type="button" class="btn btn--danger" onclick="deleteRole(${role.id})">删除</button></td>
+    </tr>`).join("");
 }
 
 async function deleteEmployee(id) {
@@ -345,7 +348,7 @@ function renderEmployees() {
     <tr>
       <td>${e.id}</td>
       <td>${e.name}</td>
-      <td>${ROLE_LABELS[e.role] || e.role}</td>
+      <td>${e.role}</td>
       <td>${e.category || "-"}</td>
       <td>${e.canNight ? "是" : "否"}</td>
       <td><button type="button" class="btn btn--danger" onclick="deleteEmployee(${e.id})">删除</button></td>
@@ -366,7 +369,6 @@ async function createSpecialty() {
     });
     document.getElementById("specialtyName").value = "";
     await loadSpecialties();
-    alert("新增专业方向成功");
   } catch (e) {
     alert(e.message);
   }
@@ -423,7 +425,6 @@ async function createPost() {
     });
     await loadPosts();
     renderSummary();
-    alert("新增岗位成功");
   } catch (e) {
     alert(e.message);
   }
@@ -487,7 +488,6 @@ async function createRule() {
     });
     await loadRules();
     renderSummary();
-    alert("特殊规则已保存");
   } catch (e) {
     alert(e.message);
   }
@@ -531,18 +531,20 @@ async function saveConstraint() {
     if (!month) {
       throw new Error("请先填写月份");
     }
-    const payloads = [
-      { role: "formal", restDaysGoal: Number(document.getElementById("constraintFormal").value) },
-      { role: "tech_support", restDaysGoal: Number(document.getElementById("constraintTech").value) },
-      { role: "mobile", restDaysGoal: Number(document.getElementById("constraintMobile").value) }
-    ];
+    const inputs = Array.from(document.querySelectorAll(".constraint-role-input"));
+    const payloads = inputs.map((input) => ({
+      role: input.dataset.roleName,
+      restDaysGoal: Number(input.value)
+    }));
+    if (!payloads.length) {
+      throw new Error("请先配置角色");
+    }
     await Promise.all(payloads.map((item) => api("/constraints", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({ groupId: gid, month, ...item })
     })));
     await loadConstraints();
-    alert("休息目标已保存");
   } catch (e) {
     alert(e.message);
   }
@@ -561,21 +563,20 @@ async function loadConstraints() {
 
 function renderConstraints() {
   const tbody = document.querySelector("#constraintTable tbody");
-  document.getElementById("constraintFormal").value = "8";
-  document.getElementById("constraintTech").value = "5";
-  document.getElementById("constraintMobile").value = "5";
+  document.querySelectorAll(".legacy-constraint-input").forEach((el) => {
+    el.closest(".field")?.remove();
+  });
   if (!state.constraints.length) {
     tbody.innerHTML = renderEmptyRow(3, "当前月份暂无休息规则");
+    renderConstraintRoleInputs({});
     return;
   }
   const byRole = Object.fromEntries(state.constraints.map((item) => [item.role, item.restDaysGoal]));
-  document.getElementById("constraintFormal").value = String(byRole.formal ?? 8);
-  document.getElementById("constraintTech").value = String(byRole.tech_support ?? 5);
-  document.getElementById("constraintMobile").value = String(byRole.mobile ?? 5);
+  renderConstraintRoleInputs(byRole);
   tbody.innerHTML = state.constraints.map((item) => `
     <tr>
       <td>${item.month}</td>
-      <td>${ROLE_LABELS[item.role] || item.role}</td>
+      <td>${item.role}</td>
       <td>${item.restDaysGoal}</td>
     </tr>`).join("");
 }
@@ -594,7 +595,6 @@ async function importNight() {
     await api("/night-shifts/import", { method: "POST", body: fd });
     await loadNightShifts();
     renderSummary();
-    alert("夜班导入成功");
   } catch (e) {
     alert(e.message);
   }
@@ -665,7 +665,6 @@ async function generateSchedule() {
       })
     });
     await loadSchedule();
-    alert("排班生成成功");
   } catch (e) {
     alert(e.message);
   }
@@ -696,9 +695,12 @@ async function exportSchedule() {
 }
 
 window.createGroup = createGroup;
+window.createRole = createRole;
+window.deleteRole = deleteRole;
 window.createEmployee = createEmployee;
-window.createEmployeesBatch = createEmployeesBatch;
 window.deleteEmployee = deleteEmployee;
+window.createSpecialty = createSpecialty;
+window.deleteSpecialty = deleteSpecialty;
 window.createPost = createPost;
 window.importNight = importNight;
 window.loadNightShifts = loadNightShifts;

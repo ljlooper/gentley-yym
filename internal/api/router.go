@@ -45,6 +45,10 @@ func NewRouter(db *gorm.DB) *gin.Engine {
 		api.PUT("/groups/:id", r.updateGroup)
 		api.DELETE("/groups/:id", r.deleteGroup)
 
+		api.GET("/roles", r.listRoles)
+		api.POST("/roles", r.createRole)
+		api.DELETE("/roles/:id", r.deleteRole)
+
 		api.GET("/employees", r.listEmployees)
 		api.POST("/employees", r.createEmployee)
 		api.PUT("/employees/:id", r.updateEmployee)
@@ -99,7 +103,20 @@ func (r *Router) createGroup(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "科室名称和小组名称不能为空"})
 		return
 	}
-	if err := r.db.Create(&req).Error; err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}); return }
+	if err := r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&req).Error; err != nil {
+			return err
+		}
+		defaultRoles := []models.RoleOption{
+			{GroupID: req.ID, Name: "正式员工"},
+			{GroupID: req.ID, Name: "技术支持"},
+			{GroupID: req.ID, Name: "机动员工"},
+		}
+		return tx.Create(&defaultRoles).Error
+	}); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 	c.JSON(http.StatusOK, req)
 }
 func (r *Router) updateGroup(c *gin.Context) {
@@ -112,6 +129,54 @@ func (r *Router) updateGroup(c *gin.Context) {
 func (r *Router) deleteGroup(c *gin.Context) {
 	id, ok := parseID(c); if !ok { return }
 	_ = r.db.Delete(&models.Group{}, id).Error
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+func (r *Router) listRoles(c *gin.Context) {
+	groupID := c.Query("groupId")
+	q := r.db.Order("id asc")
+	if groupID != "" { q = q.Where("group_id = ?", groupID) }
+	var items []models.RoleOption
+	_ = q.Find(&items).Error
+	c.JSON(http.StatusOK, items)
+}
+
+func (r *Router) createRole(c *gin.Context) {
+	var req models.RoleOption
+	if err := c.ShouldBindJSON(&req); err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}); return }
+	req.Name = strings.TrimSpace(req.Name)
+	if req.GroupID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请先选择小组"})
+		return
+	}
+	if req.Name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "角色名称不能为空"})
+		return
+	}
+	var exists int64
+	_ = r.db.Model(&models.RoleOption{}).Where("group_id = ? AND name = ?", req.GroupID, req.Name).Count(&exists).Error
+	if exists > 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "角色名称已存在"})
+		return
+	}
+	if err := r.db.Create(&req).Error; err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}); return }
+	c.JSON(http.StatusOK, req)
+}
+
+func (r *Router) deleteRole(c *gin.Context) {
+	id, ok := parseID(c); if !ok { return }
+	var role models.RoleOption
+	if err := r.db.First(&role, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "角色不存在"})
+		return
+	}
+	var employeeCount int64
+	_ = r.db.Model(&models.Employee{}).Where("group_id = ? AND role = ?", role.GroupID, role.Name).Count(&employeeCount).Error
+	if employeeCount > 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "该角色已被员工使用，无法删除"})
+		return
+	}
+	_ = r.db.Delete(&models.RoleOption{}, id).Error
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
@@ -134,6 +199,16 @@ func (r *Router) createEmployee(c *gin.Context) {
 	}
 	if req.Name == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "员工姓名不能为空"})
+		return
+	}
+	if strings.TrimSpace(string(req.Role)) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "员工角色不能为空"})
+		return
+	}
+	var roleCount int64
+	_ = r.db.Model(&models.RoleOption{}).Where("group_id = ? AND name = ?", req.GroupID, string(req.Role)).Count(&roleCount).Error
+	if roleCount == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "员工角色不在当前小组的角色配置中"})
 		return
 	}
 	if err := r.db.Create(&req).Error; err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}); return }
@@ -299,6 +374,16 @@ func (r *Router) upsertConstraint(c *gin.Context) {
 	}
 	if req.Month == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "月份不能为空"})
+		return
+	}
+	if strings.TrimSpace(string(req.Role)) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "角色不能为空"})
+		return
+	}
+	var roleCount int64
+	_ = r.db.Model(&models.RoleOption{}).Where("group_id = ? AND name = ?", req.GroupID, string(req.Role)).Count(&roleCount).Error
+	if roleCount == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "角色不在当前小组角色配置中"})
 		return
 	}
 	if req.RestDaysGoal < 0 {

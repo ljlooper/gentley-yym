@@ -67,8 +67,11 @@ func (s *SchedulerService) Generate(req GenerateRequest) ([]models.ScheduleEntry
 	if err := s.db.Where("group_id = ? AND month = ?", req.GroupID, req.Month).Find(&constraints).Error; err != nil {
 		return nil, err
 	}
-	roleRestTarget := map[models.EmployeeRole]int{
-		models.RoleFormal: 8, models.RoleTech: 5, models.RoleMobile: 5,
+	roleRestTarget := map[models.EmployeeRole]int{}
+	for _, e := range employees {
+		if _, ok := roleRestTarget[e.Role]; !ok {
+			roleRestTarget[e.Role] = 5
+		}
 	}
 	for _, c := range constraints {
 		roleRestTarget[c.Role] = c.RestDaysGoal
@@ -87,9 +90,6 @@ func (s *SchedulerService) Generate(req GenerateRequest) ([]models.ScheduleEntry
 			emp, ok := employeeByName[strings.TrimSpace(name)]
 			if !ok {
 				return nil, fmt.Errorf("夜班表中的人员[%s]未在当前小组人员名单中找到，请按姓名保持一致", name)
-			}
-			if emp.Role != models.RoleFormal {
-				continue
 			}
 			if !emp.CanNight {
 				return nil, fmt.Errorf("%s被标记为不可夜班，但出现在夜班表中", emp.Name)

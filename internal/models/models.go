@@ -5,9 +5,6 @@ import "time"
 type EmployeeRole string
 
 const (
-	RoleFormal    EmployeeRole = "formal"
-	RoleTech      EmployeeRole = "tech_support"
-	RoleMobile    EmployeeRole = "mobile"
 	ShiftRest                  = "rest"
 	ShiftOffNight              = "off_after_night"
 )
@@ -31,6 +28,14 @@ type Employee struct {
 	SortPriority int          `json:"sortPriority" gorm:"default:0"`
 	CreatedAt    time.Time    `json:"createdAt"`
 	UpdatedAt    time.Time    `json:"updatedAt"`
+}
+
+type RoleOption struct {
+	ID        uint      `json:"id" gorm:"primaryKey"`
+	GroupID   uint      `json:"groupId" gorm:"index;not null"`
+	Name      string    `json:"name" gorm:"size:64;not null"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 type SpecialtyOption struct {

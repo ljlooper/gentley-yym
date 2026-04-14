@@ -183,6 +183,10 @@ body {
   display: block;
 }
 
+.constraint-dynamic {
+  display: contents;
+}
+
 @media (max-width: 880px) {
   .config-layout {
     grid-template-columns: 1fr;
@@ -271,6 +275,16 @@ body {
   color: var(--text-muted);
 }
 
+.card__warning {
+  margin: 0 0 0.85rem;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.82rem;
+  color: #b42318;
+  background: #fff1f1;
+  border: 1px solid #f7c9c7;
+  border-radius: var(--radius-sm);
+}
+
 .row {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -295,14 +309,6 @@ body {
   .row--toolbar {
     grid-template-columns: 1fr;
   }
-}
-
-.row--bulk {
-  grid-template-columns: 1fr 180px;
-}
-
-.field--wide {
-  grid-column: 1 / 2;
 }
 
 .field {
