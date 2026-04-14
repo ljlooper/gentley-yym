@@ -307,7 +307,18 @@ func (r *Router) listRules(c *gin.Context) {
 	c.JSON(http.StatusOK, items)
 }
 func (r *Router) createRule(c *gin.Context) {
-	var req models.SpecialRule
+	var req struct {
+		GroupID     uint   `json:"groupId"`
+		Name        string `json:"name"`
+		RuleType    string `json:"ruleType"`
+		DayOfMonth  int    `json:"dayOfMonth"`
+		Weekday     int    `json:"weekday"`
+		PostName    string `json:"postName"`
+		Required    int    `json:"required"`
+		EmployeeID  uint   `json:"employeeId"`
+		EmployeeIDs []uint `json:"employeeIds"`
+		Enabled     bool   `json:"enabled"`
+	}
 	if err := c.ShouldBindJSON(&req); err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}); return }
 	req.PostName = strings.TrimSpace(req.PostName)
 	if req.GroupID == 0 {
@@ -318,7 +329,11 @@ func (r *Router) createRule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "规则岗位不能为空"})
 		return
 	}
-	if req.EmployeeID == 0 && req.Required <= 0 {
+	employeeIDs := req.EmployeeIDs
+	if len(employeeIDs) == 0 && req.EmployeeID != 0 {
+		employeeIDs = []uint{req.EmployeeID}
+	}
+	if len(employeeIDs) == 0 && req.Required <= 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "规则人数必须大于0"})
 		return
 	}
@@ -330,17 +345,54 @@ func (r *Router) createRule(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "按星期规则的星期必须在0-6之间"})
 		return
 	}
-	if req.EmployeeID != 0 {
-		var emp models.Employee
-		if err := r.db.Where("id = ? AND group_id = ?", req.EmployeeID, req.GroupID).First(&emp).Error; err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "指定人员不存在于当前小组"})
+	capSize := len(employeeIDs)
+	if capSize == 0 {
+		capSize = 1
+	}
+	items := make([]models.SpecialRule, 0, capSize)
+	if len(employeeIDs) > 0 {
+		seen := map[uint]bool{}
+		for _, employeeID := range employeeIDs {
+			if employeeID == 0 || seen[employeeID] {
+				continue
+			}
+			seen[employeeID] = true
+			var emp models.Employee
+			if err := r.db.Where("id = ? AND group_id = ?", employeeID, req.GroupID).First(&emp).Error; err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "指定人员不存在于当前小组"})
+				return
+			}
+			items = append(items, models.SpecialRule{
+				GroupID:      req.GroupID,
+				Name:         req.Name,
+				RuleType:     req.RuleType,
+				DayOfMonth:   req.DayOfMonth,
+				Weekday:      req.Weekday,
+				PostName:     req.PostName,
+				Required:     1,
+				EmployeeID:   employeeID,
+				EmployeeName: emp.Name,
+				Enabled:      req.Enabled,
+			})
+		}
+		if len(items) == 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "请至少选择一位指定人员"})
 			return
 		}
-		req.EmployeeName = emp.Name
-		req.Required = 1
+	} else {
+		items = append(items, models.SpecialRule{
+			GroupID:    req.GroupID,
+			Name:       req.Name,
+			RuleType:   req.RuleType,
+			DayOfMonth: req.DayOfMonth,
+			Weekday:    req.Weekday,
+			PostName:   req.PostName,
+			Required:   req.Required,
+			Enabled:    req.Enabled,
+		})
 	}
-	if err := r.db.Create(&req).Error; err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}); return }
-	c.JSON(http.StatusOK, req)
+	if err := r.db.Create(&items).Error; err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}); return }
+	c.JSON(http.StatusOK, items)
 }
 func (r *Router) updateRule(c *gin.Context) {
 	id, ok := parseID(c); if !ok { return }

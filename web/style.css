@@ -410,6 +410,12 @@ select {
   padding-right: 2rem;
 }
 
+select[multiple] {
+  min-height: 96px;
+  background-image: none;
+  padding-right: 0.75rem;
+}
+
 input[type="checkbox"] {
   width: 1.05rem;
   height: 1.05rem;

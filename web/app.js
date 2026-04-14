@@ -83,11 +83,18 @@ function setupConfigTabs() {
 
 function populateSelect(selectId, options, placeholder, valueKey = "value", labelKey = "label") {
   const select = document.getElementById(selectId);
-  const previous = select.value;
-  const base = `<option value="">${placeholder}</option>`;
+  const isMultiple = select.multiple;
+  const previousValues = isMultiple
+    ? Array.from(select.selectedOptions).map((item) => item.value)
+    : [select.value];
+  const base = isMultiple ? "" : `<option value="">${placeholder}</option>`;
   select.innerHTML = base + options.map((item) => `<option value="${item[valueKey]}">${item[labelKey]}</option>`).join("");
-  if (options.some((item) => String(item[valueKey]) === previous)) {
-    select.value = previous;
+  if (isMultiple) {
+    Array.from(select.options).forEach((opt) => {
+      opt.selected = previousValues.includes(opt.value);
+    });
+  } else if (options.some((item) => String(item[valueKey]) === previousValues[0])) {
+    select.value = previousValues[0];
   }
 }
 
@@ -121,7 +128,7 @@ function updateRuleTypeFields() {
 }
 
 function updateRuleEmployeeMode() {
-  const hasEmployee = Number(document.getElementById("ruleEmployeeId").value || 0) > 0;
+  const hasEmployee = Array.from(document.getElementById("ruleEmployeeId").selectedOptions).length > 0;
   document.getElementById("ruleRequiredField").style.display = hasEmployee ? "none" : "";
 }
 
@@ -459,7 +466,7 @@ async function createRule() {
     const gid = ensureGroupSelected();
     const ruleType = document.getElementById("ruleType").value;
     const postName = document.getElementById("rulePostName").value;
-    const employeeId = Number(document.getElementById("ruleEmployeeId").value || 0);
+    const employeeIds = Array.from(document.getElementById("ruleEmployeeId").selectedOptions).map((opt) => Number(opt.value)).filter((id) => id > 0);
     const dayOfMonth = Number(document.getElementById("ruleDayOfMonth").value || 0);
     const weekday = Number(document.getElementById("ruleWeekday").value || 0);
     if (!postName) {
@@ -481,8 +488,8 @@ async function createRule() {
         dayOfMonth,
         weekday,
         postName,
-        employeeId,
-        required: employeeId ? 1 : Number(document.getElementById("ruleRequired").value),
+        employeeIds,
+        required: employeeIds.length ? 1 : Number(document.getElementById("ruleRequired").value),
         enabled: true
       })
     });
