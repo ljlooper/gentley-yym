@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"power/internal/models"
@@ -75,7 +76,7 @@ func (s *SchedulerService) Generate(req GenerateRequest) ([]models.ScheduleEntry
 
 	employeeByName := make(map[string]models.Employee)
 	for _, e := range employees {
-		employeeByName[e.Name] = e
+		employeeByName[strings.TrimSpace(e.Name)] = e
 	}
 
 	// hard constraints from night shift: off day+1 and day+2 for in-group formal employees
@@ -83,9 +84,9 @@ func (s *SchedulerService) Generate(req GenerateRequest) ([]models.ScheduleEntry
 	for _, n := range night {
 		names := []string{n.StaffA, n.StaffB}
 		for _, name := range names {
-			emp, ok := employeeByName[name]
+			emp, ok := employeeByName[strings.TrimSpace(name)]
 			if !ok {
-				continue
+				return nil, fmt.Errorf("夜班表中的人员[%s]未在当前小组人员名单中找到，请按姓名保持一致", name)
 			}
 			if emp.Role != models.RoleFormal {
 				continue
@@ -142,12 +143,33 @@ func (s *SchedulerService) Generate(req GenerateRequest) ([]models.ScheduleEntry
 			dailyRequired[p.Name] = p.Required
 		}
 		for _, rule := range specialRules {
+			ruleMatched := false
 			if rule.RuleType == "date" && rule.DayOfMonth == day {
-				dailyRequired[rule.PostName] = rule.Required
+				ruleMatched = true
 			}
 			if rule.RuleType == "weekday" && rule.Weekday == int(weekdayOf(req.Month, day)) {
-				dailyRequired[rule.PostName] = rule.Required
+				ruleMatched = true
 			}
+			if !ruleMatched {
+				continue
+			}
+			if rule.EmployeeID != 0 {
+				emp, ok := employeeByName[strings.TrimSpace(rule.EmployeeName)]
+				if !ok || emp.ID != rule.EmployeeID {
+					return nil, fmt.Errorf("特殊规则中的指定人员[%s]已不存在当前小组", rule.EmployeeName)
+				}
+				if assignment[day][rule.EmployeeID] != "" {
+					return nil, fmt.Errorf("第%d天指定人员[%s]已被占用，无法重复安排", day, rule.EmployeeName)
+				}
+				if restByDayEmployee[day] != nil && restByDayEmployee[day][rule.EmployeeID] {
+					return nil, fmt.Errorf("第%d天指定人员[%s]处于夜班后休息，无法安排固定岗位", day, rule.EmployeeName)
+				}
+				assignment[day][rule.EmployeeID] = rule.PostName
+				used[rule.EmployeeID] = true
+				workCount[rule.EmployeeID]++
+				continue
+			}
+			dailyRequired[rule.PostName] = rule.Required
 		}
 
 		for _, p := range posts {

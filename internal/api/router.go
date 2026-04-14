@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"power/internal/models"
 	"power/internal/service"
@@ -49,6 +50,10 @@ func NewRouter(db *gorm.DB) *gin.Engine {
 		api.PUT("/employees/:id", r.updateEmployee)
 		api.DELETE("/employees/:id", r.deleteEmployee)
 
+		api.GET("/specialties", r.listSpecialties)
+		api.POST("/specialties", r.createSpecialty)
+		api.DELETE("/specialties/:id", r.deleteSpecialty)
+
 		api.GET("/posts", r.listPosts)
 		api.POST("/posts", r.createPost)
 		api.PUT("/posts/:id", r.updatePost)
@@ -62,6 +67,7 @@ func NewRouter(db *gorm.DB) *gin.Engine {
 		api.GET("/constraints", r.listConstraints)
 		api.POST("/constraints", r.upsertConstraint)
 
+		api.GET("/night-shifts", r.listNightShifts)
 		api.POST("/night-shifts/import", r.importNightShifts)
 		api.POST("/schedule/generate", r.generateSchedule)
 		api.GET("/schedule", r.getSchedule)
@@ -87,6 +93,12 @@ func (r *Router) listGroups(c *gin.Context) {
 func (r *Router) createGroup(c *gin.Context) {
 	var req models.Group
 	if err := c.ShouldBindJSON(&req); err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}); return }
+	req.Name = strings.TrimSpace(req.Name)
+	req.Department = strings.TrimSpace(req.Department)
+	if req.Name == "" || req.Department == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "科室名称和小组名称不能为空"})
+		return
+	}
 	if err := r.db.Create(&req).Error; err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}); return }
 	c.JSON(http.StatusOK, req)
 }
@@ -114,6 +126,16 @@ func (r *Router) listEmployees(c *gin.Context) {
 func (r *Router) createEmployee(c *gin.Context) {
 	var req models.Employee
 	if err := c.ShouldBindJSON(&req); err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}); return }
+	req.Name = strings.TrimSpace(req.Name)
+	req.Category = strings.TrimSpace(req.Category)
+	if req.GroupID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请先选择小组"})
+		return
+	}
+	if req.Name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "员工姓名不能为空"})
+		return
+	}
 	if err := r.db.Create(&req).Error; err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}); return }
 	c.JSON(http.StatusOK, req)
 }
@@ -130,6 +152,37 @@ func (r *Router) deleteEmployee(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
+func (r *Router) listSpecialties(c *gin.Context) {
+	groupID := c.Query("groupId")
+	q := r.db.Order("id asc")
+	if groupID != "" { q = q.Where("group_id = ?", groupID) }
+	var items []models.SpecialtyOption
+	_ = q.Find(&items).Error
+	c.JSON(http.StatusOK, items)
+}
+
+func (r *Router) createSpecialty(c *gin.Context) {
+	var req models.SpecialtyOption
+	if err := c.ShouldBindJSON(&req); err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}); return }
+	req.Name = strings.TrimSpace(req.Name)
+	if req.GroupID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请先选择小组"})
+		return
+	}
+	if req.Name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "专业方向名称不能为空"})
+		return
+	}
+	if err := r.db.Create(&req).Error; err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}); return }
+	c.JSON(http.StatusOK, req)
+}
+
+func (r *Router) deleteSpecialty(c *gin.Context) {
+	id, ok := parseID(c); if !ok { return }
+	_ = r.db.Delete(&models.SpecialtyOption{}, id).Error
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
 func (r *Router) listPosts(c *gin.Context) {
 	groupID := c.Query("groupId")
 	q := r.db.Order("priority asc,id asc")
@@ -141,6 +194,19 @@ func (r *Router) listPosts(c *gin.Context) {
 func (r *Router) createPost(c *gin.Context) {
 	var req models.ShiftPost
 	if err := c.ShouldBindJSON(&req); err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}); return }
+	req.Name = strings.TrimSpace(req.Name)
+	if req.GroupID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请先选择小组"})
+		return
+	}
+	if req.Name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "岗位名称不能为空"})
+		return
+	}
+	if req.Required <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "岗位人数必须大于0"})
+		return
+	}
 	if err := r.db.Create(&req).Error; err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}); return }
 	c.JSON(http.StatusOK, req)
 }
@@ -168,6 +234,36 @@ func (r *Router) listRules(c *gin.Context) {
 func (r *Router) createRule(c *gin.Context) {
 	var req models.SpecialRule
 	if err := c.ShouldBindJSON(&req); err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}); return }
+	req.PostName = strings.TrimSpace(req.PostName)
+	if req.GroupID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请先选择小组"})
+		return
+	}
+	if req.PostName == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "规则岗位不能为空"})
+		return
+	}
+	if req.EmployeeID == 0 && req.Required <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "规则人数必须大于0"})
+		return
+	}
+	if req.RuleType == "date" && (req.DayOfMonth < 1 || req.DayOfMonth > 31) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "按日期规则的日期必须在1-31之间"})
+		return
+	}
+	if req.RuleType == "weekday" && (req.Weekday < 0 || req.Weekday > 6) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "按星期规则的星期必须在0-6之间"})
+		return
+	}
+	if req.EmployeeID != 0 {
+		var emp models.Employee
+		if err := r.db.Where("id = ? AND group_id = ?", req.EmployeeID, req.GroupID).First(&emp).Error; err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "指定人员不存在于当前小组"})
+			return
+		}
+		req.EmployeeName = emp.Name
+		req.Required = 1
+	}
 	if err := r.db.Create(&req).Error; err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}); return }
 	c.JSON(http.StatusOK, req)
 }
@@ -197,6 +293,18 @@ func (r *Router) listConstraints(c *gin.Context) {
 func (r *Router) upsertConstraint(c *gin.Context) {
 	var req models.MonthlyConstraint
 	if err := c.ShouldBindJSON(&req); err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}); return }
+	if req.GroupID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请先选择小组"})
+		return
+	}
+	if req.Month == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "月份不能为空"})
+		return
+	}
+	if req.RestDaysGoal < 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "休息目标不能小于0"})
+		return
+	}
 	var existing models.MonthlyConstraint
 	err := r.db.Where("group_id = ? AND month = ? AND role = ?", req.GroupID, req.Month, req.Role).First(&existing).Error
 	if err == nil {
@@ -207,6 +315,17 @@ func (r *Router) upsertConstraint(c *gin.Context) {
 	}
 	if err := r.db.Create(&req).Error; err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}); return }
 	c.JSON(http.StatusOK, req)
+}
+
+func (r *Router) listNightShifts(c *gin.Context) {
+	month := c.Query("month")
+	q := r.db.Order("day asc, id asc")
+	if month != "" {
+		q = q.Where("month = ?", month)
+	}
+	var items []models.NightShiftRecord
+	_ = q.Find(&items).Error
+	c.JSON(http.StatusOK, items)
 }
 
 func (r *Router) importNightShifts(c *gin.Context) {

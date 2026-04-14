@@ -24,13 +24,21 @@ type Employee struct {
 	ID           uint         `json:"id" gorm:"primaryKey"`
 	Name         string       `json:"name" gorm:"size:64;not null"`
 	Role         EmployeeRole `json:"role" gorm:"size:32;not null"`
-	Category     string       `json:"category" gorm:"size:32;default:''"` // e.g. biochemistry/immunology
+	Category     string       `json:"category" gorm:"size:32;default:''"`
 	GroupID      uint         `json:"groupId" gorm:"index;not null"`
 	CanNight     bool         `json:"canNight"`
 	Active       bool         `json:"active" gorm:"default:true"`
 	SortPriority int          `json:"sortPriority" gorm:"default:0"`
 	CreatedAt    time.Time    `json:"createdAt"`
 	UpdatedAt    time.Time    `json:"updatedAt"`
+}
+
+type SpecialtyOption struct {
+	ID        uint      `json:"id" gorm:"primaryKey"`
+	GroupID   uint      `json:"groupId" gorm:"index;not null"`
+	Name      string    `json:"name" gorm:"size:64;not null"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 type ShiftPost struct {
@@ -54,6 +62,8 @@ type SpecialRule struct {
 	Weekday     int       `json:"weekday"` // 0=Sunday
 	PostName    string    `json:"postName" gorm:"size:64;not null"`
 	Required    int       `json:"required" gorm:"not null"`
+	EmployeeID  uint      `json:"employeeId" gorm:"index"`
+	EmployeeName string   `json:"employeeName" gorm:"size:64;default:''"`
 	Enabled     bool      `json:"enabled" gorm:"default:true"`
 	Description string    `json:"description" gorm:"size:255;default:''"`
 	CreatedAt   time.Time `json:"createdAt"`

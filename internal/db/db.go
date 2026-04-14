@@ -20,6 +20,7 @@ func Open(dataDir string) (*gorm.DB, error) {
 	if err := database.AutoMigrate(
 		&models.Group{},
 		&models.Employee{},
+		&models.SpecialtyOption{},
 		&models.ShiftPost{},
 		&models.SpecialRule{},
 		&models.NightShiftRecord{},
