@@ -41,12 +41,12 @@ func TestCurrentDatabaseAprilNightShiftSheetAudit(t *testing.T) {
 	defer func() { _ = sqlDB.Close() }()
 
 	records := aprilNightShiftSheetRecords()
-	unknown, ineligible, err := auditNightShiftSheet(database, 1, records)
+	externalToGroup, ineligible, err := auditNightShiftSheet(database, 1, records)
 	if err != nil {
 		t.Fatalf("audit night shift sheet: %v", err)
 	}
 
-	expectedUnknown := []string{
+	expectedExternalToGroup := []string{
 		"\u4ed8\u5c0f\u6e05",
 		"\u4e07\u5c0f\u5a1f",
 		"\u5eb7\u7d20\u6021",
@@ -61,11 +61,11 @@ func TestCurrentDatabaseAprilNightShiftSheetAudit(t *testing.T) {
 	}
 	expectedIneligible := []string{"\u6797\u6b22"}
 
-	sort.Strings(expectedUnknown)
+	sort.Strings(expectedExternalToGroup)
 	sort.Strings(expectedIneligible)
 
-	if !equalStringSlices(unknown, expectedUnknown) {
-		t.Fatalf("unexpected unknown names: got %v want %v", unknown, expectedUnknown)
+	if !equalStringSlices(externalToGroup, expectedExternalToGroup) {
+		t.Fatalf("unexpected names outside current group: got %v want %v", externalToGroup, expectedExternalToGroup)
 	}
 	if !equalStringSlices(ineligible, expectedIneligible) {
 		t.Fatalf("unexpected ineligible names: got %v want %v", ineligible, expectedIneligible)
@@ -83,8 +83,8 @@ func TestCurrentDatabaseAprilNightShiftSheetAudit(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected schedule generation to fail with current db and provided night shift sheet")
 	}
-	if !strings.Contains(err.Error(), "\u5eb7\u7d20\u6021") {
-		t.Fatalf("expected first failure to mention 康素怡, got %v", err)
+	if !strings.Contains(err.Error(), "\u6797\u6b22") {
+		t.Fatalf("expected failure to mention 林欢, got %v", err)
 	}
 }
 
@@ -99,7 +99,7 @@ func auditNightShiftSheet(database *gorm.DB, groupID uint, records []models.Nigh
 		knownEmployees[strings.TrimSpace(employee.Name)] = employee
 	}
 
-	unknownSet := map[string]bool{}
+	externalSet := map[string]bool{}
 	ineligibleSet := map[string]bool{}
 
 	for _, record := range records {
@@ -107,7 +107,7 @@ func auditNightShiftSheet(database *gorm.DB, groupID uint, records []models.Nigh
 			normalized := strings.TrimSpace(name)
 			employee, ok := knownEmployees[normalized]
 			if !ok {
-				unknownSet[normalized] = true
+				externalSet[normalized] = true
 				continue
 			}
 			if !employee.CanNight {
@@ -116,12 +116,12 @@ func auditNightShiftSheet(database *gorm.DB, groupID uint, records []models.Nigh
 		}
 	}
 
-	unknown := setKeys(unknownSet)
+	external := setKeys(externalSet)
 	ineligible := setKeys(ineligibleSet)
-	sort.Strings(unknown)
+	sort.Strings(external)
 	sort.Strings(ineligible)
 
-	return unknown, ineligible, nil
+	return external, ineligible, nil
 }
 
 func setKeys(values map[string]bool) []string {

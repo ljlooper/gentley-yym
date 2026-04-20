@@ -263,7 +263,9 @@ func (p *schedulePlanner) markCurrentMonthNightRests() error {
 		for _, name := range []string{record.StaffA, record.StaffB} {
 			employee, ok := p.employeeByName[strings.TrimSpace(name)]
 			if !ok {
-				return fmt.Errorf("night shift employee %q was not found in current group", name)
+				// The night shift sheet is department-wide. We only apply constraints
+				// to employees that belong to the current group.
+				continue
 			}
 			if !employee.CanNight {
 				return fmt.Errorf("employee %q is marked as not eligible for night shift", employee.Name)
