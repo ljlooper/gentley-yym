@@ -268,7 +268,7 @@ func (p *schedulePlanner) markCurrentMonthNightRests() error {
 				continue
 			}
 			if !employee.CanNight {
-				return fmt.Errorf("employee %q is marked as not eligible for night shift", employee.Name)
+				return fmt.Errorf("员工“%s”被标记为不可上夜班，但出现在夜班表中", employee.Name)
 			}
 			for _, restDay := range []int{record.Day + 1, record.Day + 2} {
 				if restDay <= p.totalDays {
@@ -436,13 +436,13 @@ func (p *schedulePlanner) applySpecialRules(day int, required map[string]int, us
 
 		employee, ok := p.employeeByName[strings.TrimSpace(rule.EmployeeName)]
 		if !ok || employee.ID != rule.EmployeeID {
-			return fmt.Errorf("special rule employee %q is no longer available in current group", rule.EmployeeName)
+			return fmt.Errorf("特殊规则中的指定员工“%s”已不在当前小组中", rule.EmployeeName)
 		}
 		if p.assignment[day][rule.EmployeeID] != "" {
-			return fmt.Errorf("employee %q is already assigned on day %d", rule.EmployeeName, day)
+			return fmt.Errorf("第%d天员工“%s”已经被安排，不能重复指定", day, rule.EmployeeName)
 		}
 		if p.restByDayEmployee[day] != nil && p.restByDayEmployee[day][rule.EmployeeID] {
-			return fmt.Errorf("employee %q is resting after night shift on day %d", rule.EmployeeName, day)
+			return fmt.Errorf("第%d天员工“%s”处于夜班后休息，不能安排固定岗位", day, rule.EmployeeName)
 		}
 
 		p.assignment[day][rule.EmployeeID] = rule.PostName
@@ -472,7 +472,7 @@ func (p *schedulePlanner) assignPosts(day int, required map[string]int, used map
 		for i := 0; i < need; i++ {
 			employeeID, err := p.pickCandidate(day, used)
 			if err != nil {
-				return fmt.Errorf("day %d post %q: %w", day, post.Name, err)
+				return fmt.Errorf("第%d天岗位“%s”：%w", day, post.Name, err)
 			}
 
 			p.assignment[day][employeeID] = post.Name
@@ -522,7 +522,7 @@ func (p *schedulePlanner) pickCandidate(day int, used map[uint]bool) (uint, erro
 	return candidateID, nil
 }
 
-var errorsNoCandidate = fmt.Errorf("unable to satisfy staffing requirement")
+var errorsNoCandidate = fmt.Errorf("无法满足岗位人数要求")
 
 func (p *schedulePlanner) fillRemainingWithRest(day int) {
 	type employeeNeed struct {
@@ -561,7 +561,7 @@ func (p *schedulePlanner) validateRestTargets() error {
 		actual := p.restCount[employee.ID]
 		target := p.empRestTarget[employee.ID]
 		if actual < target && !p.empAllowLessRest[employee.ID] {
-			return fmt.Errorf("employee %q requires %d rest days, but only %d were assigned", employee.Name, target, actual)
+			return fmt.Errorf("员工“%s”本月必须休满%d天，但当前只安排了%d天", employee.Name, target, actual)
 		}
 	}
 	return nil

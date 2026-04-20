@@ -3,8 +3,8 @@ package service
 import "errors"
 
 var (
-	errInvalidMonthFormat = errors.New("month format must be YYYY-MM")
-	errNightShiftRequired = errors.New("night shift records are required before generating schedule")
-	errNoActiveEmployees  = errors.New("no active employees found in group")
-	errNoEnabledPosts     = errors.New("no enabled posts found in group")
+	errInvalidMonthFormat = errors.New("月份格式应为 YYYY-MM")
+	errNightShiftRequired = errors.New("生成排班前请先导入当月夜班表")
+	errNoActiveEmployees  = errors.New("当前小组没有可用员工")
+	errNoEnabledPosts     = errors.New("当前小组没有启用中的岗位")
 )

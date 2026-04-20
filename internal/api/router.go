@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -16,17 +17,38 @@ import (
 
 type Router struct {
 	db        *gorm.DB
-	nightSvc  *service.NightShiftService
-	schedSvc  *service.SchedulerService
-	exportSvc *service.ExportService
+	nightSvc  NightShiftImporter
+	schedSvc  ScheduleGenerator
+	exportSvc ScheduleExporter
+}
+
+type NightShiftImporter interface {
+	Import(month string, reader io.Reader) error
+}
+
+type ScheduleGenerator interface {
+	Generate(req service.GenerateRequest) ([]models.ScheduleEntry, error)
+}
+
+type ScheduleExporter interface {
+	ExportMonth(groupID uint, month string, out io.Writer) error
 }
 
 func NewRouter(db *gorm.DB) *gin.Engine {
+	return NewRouterWithServices(
+		db,
+		service.NewNightShiftService(db),
+		service.NewSchedulerService(db),
+		service.NewExportService(db),
+	)
+}
+
+func NewRouterWithServices(db *gorm.DB, nightSvc NightShiftImporter, schedSvc ScheduleGenerator, exportSvc ScheduleExporter) *gin.Engine {
 	r := &Router{
 		db:        db,
-		nightSvc:  service.NewNightShiftService(db),
-		schedSvc:  service.NewSchedulerService(db),
-		exportSvc: service.NewExportService(db),
+		nightSvc:  nightSvc,
+		schedSvc:  schedSvc,
+		exportSvc: exportSvc,
 	}
 	engine := gin.Default()
 	engine.GET("/", func(c *gin.Context) {
@@ -100,7 +122,7 @@ func NewRouter(db *gorm.DB) *gin.Engine {
 func parseID(c *gin.Context) (uint, bool) {
 	id64, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的ID"})
 		return 0, false
 	}
 	return uint(id64), true
@@ -111,6 +133,7 @@ func (r *Router) listGroups(c *gin.Context) {
 	_ = r.db.Order("id desc").Find(&items).Error
 	c.JSON(http.StatusOK, items)
 }
+
 func (r *Router) createGroup(c *gin.Context) {
 	var req models.Group
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -139,6 +162,7 @@ func (r *Router) createGroup(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, req)
 }
+
 func (r *Router) updateGroup(c *gin.Context) {
 	id, ok := parseID(c)
 	if !ok {
@@ -155,6 +179,7 @@ func (r *Router) updateGroup(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
+
 func (r *Router) deleteGroup(c *gin.Context) {
 	id, ok := parseID(c)
 	if !ok {
@@ -294,6 +319,7 @@ func (r *Router) listEmployees(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, resp)
 }
+
 func (r *Router) createEmployee(c *gin.Context) {
 	var req struct {
 		GroupID      uint     `json:"groupId"`
@@ -356,6 +382,7 @@ func (r *Router) createEmployee(c *gin.Context) {
 		"createdAt": item.CreatedAt, "updatedAt": item.UpdatedAt,
 	})
 }
+
 func (r *Router) updateEmployee(c *gin.Context) {
 	id, ok := parseID(c)
 	if !ok {
@@ -425,6 +452,7 @@ func (r *Router) updateEmployee(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
+
 func (r *Router) deleteEmployee(c *gin.Context) {
 	id, ok := parseID(c)
 	if !ok {
@@ -486,6 +514,7 @@ func (r *Router) listPosts(c *gin.Context) {
 	_ = q.Find(&items).Error
 	c.JSON(http.StatusOK, items)
 }
+
 func (r *Router) createPost(c *gin.Context) {
 	var req models.ShiftPost
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -511,6 +540,7 @@ func (r *Router) createPost(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, req)
 }
+
 func (r *Router) updatePost(c *gin.Context) {
 	id, ok := parseID(c)
 	if !ok {
@@ -527,6 +557,7 @@ func (r *Router) updatePost(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
+
 func (r *Router) deletePost(c *gin.Context) {
 	id, ok := parseID(c)
 	if !ok {
@@ -829,6 +860,7 @@ func (r *Router) listRules(c *gin.Context) {
 	_ = q.Find(&items).Error
 	c.JSON(http.StatusOK, items)
 }
+
 func (r *Router) createRule(c *gin.Context) {
 	var req struct {
 		GroupID     uint   `json:"groupId"`
@@ -926,6 +958,7 @@ func (r *Router) createRule(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, items)
 }
+
 func (r *Router) updateRule(c *gin.Context) {
 	id, ok := parseID(c)
 	if !ok {
@@ -942,6 +975,7 @@ func (r *Router) updateRule(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
+
 func (r *Router) deleteRule(c *gin.Context) {
 	id, ok := parseID(c)
 	if !ok {
@@ -965,6 +999,7 @@ func (r *Router) listConstraints(c *gin.Context) {
 	_ = q.Find(&items).Error
 	c.JSON(http.StatusOK, items)
 }
+
 func (r *Router) upsertConstraint(c *gin.Context) {
 	var req models.MonthlyConstraint
 	if err := c.ShouldBindJSON(&req); err != nil {
