@@ -23,10 +23,15 @@ func Open(dataDir string) (*gorm.DB, error) {
 		&models.Employee{},
 		&models.SpecialtyOption{},
 		&models.ShiftPost{},
+		&models.PostDailyRequirement{},
+		&models.PostWeekdayRequirement{},
 		&models.SpecialRule{},
 		&models.NightShiftRecord{},
 		&models.MonthlyConstraint{},
 		&models.ScheduleEntry{},
+		&models.EmployeeRestPlan{},
+		&models.RestDebtRecord{},
+		&models.ScheduleRemark{},
 	); err != nil {
 		return nil, fmt.Errorf("migrate tables: %w", err)
 	}

@@ -6,7 +6,7 @@
   <title>医院小组排班系统</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
@@ -16,7 +16,7 @@
         <span class="site-header__logo" aria-hidden="true">班</span>
         <div>
           <h1 class="site-header__title">医院小组排班系统</h1>
-          <p class="site-header__subtitle">单机版 · 自动排班 · 配置与结果一目了然</p>
+          <p class="site-header__subtitle">先建小组、角色、专业方向、员工和班种，再维护月度配置。</p>
         </div>
       </div>
     </div>
@@ -25,7 +25,7 @@
   <div class="page">
     <section class="tabbar card">
       <div class="tabbar__tabs">
-        <button type="button" class="tabbar__tab is-active" data-tab-target="configTab">基础信息</button>
+        <button type="button" class="tabbar__tab is-active" data-tab-target="configTab">基础配置</button>
         <button type="button" class="tabbar__tab" data-tab-target="scheduleTab">生成排班</button>
       </div>
       <div class="tabbar__context">
@@ -39,9 +39,8 @@
     <main class="main-grid">
       <section id="configTab" class="tab-panel is-active">
         <section class="card card--accent">
-          <h2 class="card__title">基础信息主数据维护</h2>
-          <p class="card__hint">用于维护排班主数据（角色、专业方向、班次模板、例外规则等）。所有配置持久化保存并自动回显。</p>
-
+          <h2 class="card__title">基础数据</h2>
+          <p class="card__hint">先建小组、角色、专业方向、员工和班种，再维护月度配置。</p>
           <div class="row row--actions">
             <label class="field">
               <span class="field__label">小组名称</span>
@@ -49,7 +48,7 @@
             </label>
             <label class="field">
               <span class="field__label">科室名称</span>
-              <input id="deptName" type="text" placeholder="科室" />
+              <input id="deptName" type="text" placeholder="如：检验科" />
             </label>
             <div class="field field--btn">
               <span class="field__label field__label--invisible">操作</span>
@@ -61,277 +60,276 @@
         <section class="card">
           <div class="config-layout">
             <aside class="subtabbar">
-              <button type="button" class="subtabbar__tab" data-config-tab="rolePanel">角色配置</button>
-              <button type="button" class="subtabbar__tab is-active" data-config-tab="specialtyPanel">专业方向</button>
-              <button type="button" class="subtabbar__tab" data-config-tab="employeePanel">人员角色</button>
-              <button type="button" class="subtabbar__tab" data-config-tab="postPanel">班种配置</button>
-              <button type="button" class="subtabbar__tab" data-config-tab="rulePanel">特殊排班</button>
-              <button type="button" class="subtabbar__tab" data-config-tab="constraintPanel">休息规则</button>
+              <button type="button" class="subtabbar__tab is-active" data-config-tab="rolePanel">角色配置</button>
+              <button type="button" class="subtabbar__tab" data-config-tab="specialtyPanel">专业方向</button>
+              <button type="button" class="subtabbar__tab" data-config-tab="employeePanel">人员档案</button>
+              <button type="button" class="subtabbar__tab" data-config-tab="postPanel">班种模板</button>
+              <button type="button" class="subtabbar__tab" data-config-tab="restConfigPanel">休息配置</button>
               <button type="button" class="subtabbar__tab" data-config-tab="nightPanel">夜班导入</button>
             </aside>
 
             <div class="config-content">
-          <section id="rolePanel" class="config-panel">
-            <h2 class="card__title">角色字典配置</h2>
-            <p class="card__hint">按科室岗位体系维护角色字典。人员档案与休息配额将自动引用此列表。</p>
-            <div class="row row--actions">
-              <label class="field">
-                <span class="field__label">角色名称</span>
-                <input id="roleName" type="text" placeholder="如：进修、实习、外援等" />
-              </label>
-              <div class="field field--btn">
-                <span class="field__label field__label--invisible">操作</span>
-                <button type="button" class="btn btn--secondary" onclick="createRole()">新增角色</button>
-              </div>
-            </div>
+              <section id="rolePanel" class="config-panel is-active">
+                <h2 class="card__title">角色字典</h2>
+                <div class="row row--actions">
+                  <label class="field">
+                    <span class="field__label">角色名称</span>
+                    <input id="roleName" type="text" placeholder="如：正式员工、技术支持、机动员工" />
+                  </label>
+                  <label class="field field--checkbox">
+                    <span class="field__label">允许少休</span>
+                    <span class="checkbox-wrap">
+                      <input id="roleAllowLessRest" type="checkbox" />
+                      <span>少于目标天数也允许</span>
+                    </span>
+                  </label>
+                  <div class="field field--btn">
+                    <span class="field__label field__label--invisible">操作</span>
+                    <button type="button" class="btn btn--secondary" onclick="createRole()">新增角色</button>
+                  </div>
+                </div>
+                <div class="table-wrap">
+                  <table id="roleTable" class="data-table">
+                    <thead><tr><th>角色</th><th>允许少休</th><th class="col-actions">操作</th></tr></thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
+              </section>
 
-            <div class="table-wrap">
-              <table id="roleTable" class="data-table">
-                <thead>
-                  <tr>
-                    <th>角色名称</th>
-                    <th class="col-actions">操作</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </section>
+              <section id="specialtyPanel" class="config-panel">
+                <h2 class="card__title">专业方向</h2>
+                <div class="row row--actions">
+                  <label class="field">
+                    <span class="field__label">方向名称</span>
+                    <input id="specialtyName" type="text" placeholder="如：生化、免疫、临检" />
+                  </label>
+                  <div class="field field--btn">
+                    <span class="field__label field__label--invisible">操作</span>
+                    <button type="button" class="btn btn--secondary" onclick="createSpecialty()">新增专业方向</button>
+                  </div>
+                </div>
+                <div class="table-wrap">
+                  <table id="specialtyTable" class="data-table">
+                    <thead><tr><th>名称</th><th class="col-actions">操作</th></tr></thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
+              </section>
 
-          <section id="specialtyPanel" class="config-panel is-active">
-            <h2 class="card__title">专业方向字典配置</h2>
-            <p class="card__hint">建议先完成专业方向字典（如生化、免疫、临检），人员录入时通过下拉选择，避免自由输入导致数据不一致。</p>
-            <div class="row row--actions">
-              <label class="field">
-                <span class="field__label">专业方向名称</span>
-                <input id="specialtyName" type="text" placeholder="如：生化 / 免疫 / 临检" />
-              </label>
-              <div class="field field--btn">
-                <span class="field__label field__label--invisible">操作</span>
-                <button type="button" class="btn btn--secondary" onclick="createSpecialty()">新增专业方向</button>
-              </div>
-            </div>
+              <section id="employeePanel" class="config-panel">
+                <h2 class="card__title">人员档案</h2>
+                <div class="row row--actions row--employee-form">
+                  <label class="field">
+                    <span class="field__label">姓名</span>
+                    <input id="employeeName" type="text" placeholder="员工姓名" />
+                  </label>
+                  <label class="field">
+                    <span class="field__label">角色</span>
+                    <select id="employeeRole" multiple style="display:none"></select>
+                    <div id="employeeRolePicker" class="employee-role-editor-wrap"></div>
+                  </label>
+                  <label class="field">
+                    <span class="field__label">专业方向</span>
+                    <select id="employeeCategory"></select>
+                  </label>
+                  <label class="field field--checkbox">
+                    <span class="field__label">夜班资格</span>
+                    <span class="checkbox-wrap">
+                      <input id="canNight" type="checkbox" checked />
+                      <span>可上夜班</span>
+                    </span>
+                  </label>
+                  <div class="field field--btn">
+                    <span class="field__label field__label--invisible">操作</span>
+                    <button type="button" class="btn btn--primary" onclick="createEmployee()">新增员工</button>
+                  </div>
+                </div>
+                <div class="table-wrap">
+                  <table id="employeeTable" class="data-table">
+                    <thead><tr><th>ID</th><th>姓名</th><th>角色 / 专业方向</th><th>夜班资格</th><th class="col-actions">操作</th></tr></thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
+              </section>
 
-            <div class="table-wrap">
-              <table id="specialtyTable" class="data-table">
-                <thead>
-                  <tr>
-                    <th>名称</th>
-                    <th class="col-actions">操作</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </section>
+              <section id="postPanel" class="config-panel">
+                <h2 class="card__title">班种模板</h2>
+                <p class="card__hint">先建立班种和默认人数，再在月度大表中逐天调整人数；班种很多时可横向滚动查看。</p>
 
-          <section id="employeePanel" class="config-panel">
-            <h2 class="card__title">人员档案维护</h2>
-            <p class="card__hint">建立小组人员档案，角色与专业方向均采用标准字典项选择。</p>
-            <div class="row row--actions">
-              <label class="field">
-                <span class="field__label">员工姓名</span>
-                <input id="employeeName" type="text" placeholder="姓名" />
-              </label>
-              <label class="field">
-                <span class="field__label">角色</span>
-                <select id="employeeRole"></select>
-              </label>
-              <label class="field">
-                <span class="field__label">专业方向</span>
-                <select id="employeeCategory"></select>
-              </label>
-              <label class="field field--checkbox">
-                <span class="field__label">夜班</span>
-                <span class="checkbox-wrap">
-                  <input id="canNight" type="checkbox" checked />
-                  <span>可夜班</span>
-                </span>
-              </label>
-              <div class="field field--btn">
-                <span class="field__label field__label--invisible">操作</span>
-                <button type="button" class="btn btn--primary" onclick="createEmployee()">新增员工</button>
-              </div>
-            </div>
+                <div class="planner-hero planner-hero--compact">
+                  <div class="planner-hero__card">
+                    <span class="planner-hero__step">01</span>
+                    <strong>建立班种模板</strong>
+                    <p>维护班种名称和默认人数，作为当月初始值。</p>
+                  </div>
+                  <div class="planner-hero__card">
+                    <span class="planner-hero__step">02</span>
+                    <strong>维护月度大表</strong>
+                    <p>按日期查看每天需求，并自动汇总当天总人数。</p>
+                  </div>
+                </div>
 
-            <div class="table-wrap">
-              <table id="employeeTable" class="data-table">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>姓名</th>
-                    <th>角色</th>
-                    <th>专业方向</th>
-                    <th>可夜班</th>
-                    <th class="col-actions">操作</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </section>
+                <div class="row row--actions">
+                  <label class="field">
+                    <span class="field__label">班种名称</span>
+                    <input id="postName" type="text" placeholder="如：A1 / A2 / A5 / A6" />
+                  </label>
+                  <label class="field field--narrow">
+                    <span class="field__label">默认人数</span>
+                    <input id="postRequired" type="number" min="0" value="1" />
+                  </label>
+                  <div class="field field--btn">
+                    <span class="field__label field__label--invisible">操作</span>
+                    <button type="button" class="btn btn--secondary" onclick="createPost()">新增班种</button>
+                  </div>
+                </div>
 
-          <section id="postPanel" class="config-panel">
-            <h2 class="card__title">基础班次模板</h2>
-            <p class="card__warning">重要：此处仅配置“日常固定需求班次（Daily Baseline Shifts）”；非每日需求请在“例外排班规则”配置，避免重复叠加导致冲突。</p>
-            <div class="row row--actions">
-              <label class="field">
-                <span class="field__label">岗位名称</span>
-                <input id="postName" type="text" placeholder="如 A1 / A2" />
-              </label>
-              <label class="field field--narrow">
-                <span class="field__label">需求人数</span>
-                <input id="postRequired" type="number" value="1" min="1" />
-              </label>
-              <div class="field field--btn">
-                <span class="field__label field__label--invisible">操作</span>
-                <button type="button" class="btn btn--secondary" onclick="createPost()">新增岗位</button>
-              </div>
-            </div>
+                <div class="table-wrap">
+                  <table id="postTable" class="data-table">
+                    <thead><tr><th>班种</th><th>默认人数</th><th class="col-actions">操作</th></tr></thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
 
-            <div class="table-wrap">
-              <table id="postTable" class="data-table">
-                <thead>
-                  <tr>
-                    <th>班次名称</th>
-                    <th>人数</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </section>
+                <div class="preview-card">
+                  <div class="preview-card__header">
+                    <div>
+                      <h3 class="card__title">月度班种人数大表</h3>
+                      <p class="card__hint">每行是一天，列出当天各班种人数和总人数；班种过多时可横向滚动，不会再顶出边框。</p>
+                    </div>
+                    <span id="postPreviewMonthBadge" class="month-badge">未选择月份</span>
+                  </div>
 
-          <section id="rulePanel" class="config-panel">
-            <h2 class="card__title">例外排班规则</h2>
-            <p class="card__hint">用于配置非日常班次需求（按日期/按星期）与定岗安排（指定人员）。</p>
-            <div class="row row--actions">
-              <label class="field">
-                <span class="field__label">触发类型</span>
-                <select id="ruleType">
-                  <option value="date">按日期触发</option>
-                  <option value="weekday">按星期触发</option>
-                </select>
-              </label>
-              <label class="field field--narrow" id="ruleDayField">
-                <span class="field__label">日期 (1-31)</span>
-                <input id="ruleDayOfMonth" type="number" min="1" max="31" placeholder="日" />
-              </label>
-              <label class="field field--narrow" id="ruleWeekdayField">
-                <span class="field__label">星期 (0-6)</span>
-                <input id="ruleWeekday" type="number" min="0" max="6" placeholder="0=周日" />
-              </label>
-              <label class="field">
-                <span class="field__label">目标班次</span>
-                <select id="rulePostName"></select>
-              </label>
-              <label class="field">
-                <span class="field__label">指定人员（可选）</span>
-                <select id="ruleEmployeeId" multiple></select>
-              </label>
-              <label class="field field--narrow" id="ruleRequiredField">
-                <span class="field__label">需求编制人数</span>
-                <input id="ruleRequired" type="number" min="1" value="1" />
-              </label>
-              <div class="field field--btn">
-                <span class="field__label field__label--invisible">操作</span>
-                <button type="button" class="btn btn--secondary" onclick="createRule()">保存规则</button>
-              </div>
-            </div>
+                  <div class="row row--actions row--matrix-toolbar">
+                    <label class="field">
+                      <span class="field__label">月份</span>
+                      <input id="postWeekdayMonth" type="month" />
+                    </label>
+                    <div class="field field--btn">
+                      <span class="field__label field__label--invisible">操作</span>
+                      <button type="button" class="btn btn--ghost" onclick="copyPostRequirementsFromPrevMonth()">复制上月数据</button>
+                    </div>
+                    <div class="field field--btn">
+                      <span class="field__label field__label--invisible">操作</span>
+                      <button type="button" class="btn btn--primary" onclick="savePostDailyMatrix()">保存本月大表</button>
+                    </div>
+                  </div>
 
-            <div class="table-wrap">
-              <table id="ruleTable" class="data-table">
-                <thead>
-                  <tr>
-                    <th>规则类型</th>
-                    <th>触发条件</th>
-                    <th>目标班次</th>
-                    <th>定岗人员</th>
-                    <th>编制人数</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </section>
+                  <div class="table-wrap table-wrap--wide table-wrap--matrix">
+                    <table id="postDailyMatrixTable" class="data-table data-table--matrix">
+                      <thead></thead>
+                      <tbody></tbody>
+                    </table>
+                  </div>
+                </div>
 
-          <section id="constraintPanel" class="config-panel">
-            <h2 class="card__title">月度休息配额规则</h2>
-            <p class="card__hint">按月份设置各角色休息天数目标（Rest Quota），用于平衡排班强度与公平性。</p>
-            <div class="row row--actions">
-              <label class="field">
-                <span class="field__label">月份</span>
-                <input id="monthConstraint" type="month" />
-              </label>
-              <label class="field field--narrow">
-                <span class="field__label">正式员工休息目标</span>
-                <input id="constraintFormal" type="number" min="0" value="8" class="legacy-constraint-input" />
-              </label>
-              <label class="field field--narrow">
-                <span class="field__label">技术支持休息目标</span>
-                <input id="constraintTech" type="number" min="0" value="5" class="legacy-constraint-input" />
-              </label>
-              <label class="field field--narrow">
-                <span class="field__label">机动员工休息目标</span>
-                <input id="constraintMobile" type="number" min="0" value="5" class="legacy-constraint-input" />
-              </label>
-              <div id="constraintDynamicInputs" class="constraint-dynamic"></div>
-              <div class="field field--btn">
-                <span class="field__label field__label--invisible">操作</span>
-                <button type="button" class="btn btn--secondary" onclick="saveConstraint()">保存本月配额</button>
-              </div>
-            </div>
+                <div class="table-wrap">
+                  <table id="postDailyTable" class="data-table">
+                    <thead><tr><th>月份</th><th>日期</th><th>班种</th><th>人数</th></tr></thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
+              </section>
 
-            <div class="table-wrap">
-              <table id="constraintTable" class="data-table">
-                <thead>
-                  <tr>
-                    <th>月份</th>
-                    <th>角色</th>
-                    <th>休息配额目标</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </section>
+              <section id="restConfigPanel" class="config-panel">
+                <div class="rest-config-panel">
+                  <div class="rest-config-panel__header">
+                    <div>
+                      <h2 class="card__title">休息配置</h2>
+                      <p class="card__hint">统一维护角色月度休息目标和员工本月配置，避免在多个菜单间切换。</p>
+                    </div>
+                    <label class="field field--month">
+                      <span class="field__label">月份</span>
+                      <input id="restConfigMonth" type="month" />
+                    </label>
+                  </div>
 
-          <section id="nightPanel" class="config-panel">
-            <h2 class="card__title">夜班基准导入与核对</h2>
-            <p class="card__hint">导入当月夜班基准数据并回显核对。系统按人员姓名匹配，请确保与人员档案一致。</p>
-            <div class="row row--actions">
-              <label class="field">
-                <span class="field__label">月份</span>
-                <input id="monthNight" type="text" placeholder="YYYY-MM" />
-              </label>
-              <label class="field field--file">
-                <span class="field__label">Excel 文件</span>
-                <input id="nightFile" type="file" accept=".xlsx,.xls" />
-              </label>
-              <div class="field field--btn">
-                <span class="field__label field__label--invisible">操作</span>
-                <button type="button" class="btn btn--primary" onclick="importNight()">导入夜班基准表</button>
-              </div>
-              <div class="field field--btn">
-                <span class="field__label field__label--invisible">操作</span>
-                <button type="button" class="btn btn--ghost" onclick="loadNightShifts()">刷新核对结果</button>
-              </div>
-            </div>
+                  <div class="rest-config-grid">
+                    <section class="rest-config-card">
+                      <h3 class="rest-config-card__title">角色月度休息目标</h3>
+                      <div class="row row--actions">
+                        <div id="constraintDynamicInputs" class="constraint-dynamic"></div>
+                        <div class="field field--btn">
+                          <span class="field__label field__label--invisible">操作</span>
+                          <button type="button" class="btn btn--secondary" onclick="saveConstraint()">保存休息目标</button>
+                        </div>
+                      </div>
+                      <div class="table-wrap">
+                        <table id="constraintTable" class="data-table">
+                          <thead><tr><th>月份</th><th>角色</th><th>休息目标</th></tr></thead>
+                          <tbody></tbody>
+                        </table>
+                      </div>
+                    </section>
 
-            <div class="table-wrap">
-              <table id="nightTable" class="data-table">
-                <thead>
-                  <tr>
-                    <th>月份</th>
-                    <th>日期</th>
-                    <th>夜班人员 A</th>
-                    <th>夜班人员 B</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </section>
+                    <section class="rest-config-card">
+                      <h3 class="rest-config-card__title">员工本月配置</h3>
+                      <div class="row row--actions row--rest-plan">
+                        <label class="field">
+                          <span class="field__label">员工</span>
+                          <select id="restPlanEmployee"></select>
+                        </label>
+                        <label class="field field--narrow">
+                          <span class="field__label">浮动天数</span>
+                          <input id="restPlanFloatDays" type="number" min="-1" value="-1" />
+                        </label>
+                        <label class="field field--rest-plan-note">
+                          <span class="field__label">备注</span>
+                          <input id="restPlanNote" type="text" placeholder="可选说明" />
+                        </label>
+                        <div class="field field--btn field--rest-plan-save">
+                          <span class="field__label field__label--invisible">操作</span>
+                          <button type="button" class="btn btn--secondary" onclick="saveRestPlan()">保存配置</button>
+                        </div>
+                      </div>
+
+                      <div class="field">
+                        <span class="field__label">固定休息日</span>
+                        <input id="restPlanFixedDays" type="hidden" />
+                        <div id="restPlanFixedDaysPicker" class="day-picker"></div>
+                        <p id="restPlanFixedDaysSummary" class="field__help">请选择固定休息日，可多选。</p>
+                      </div>
+
+                      <div id="restDebtAlert" class="debt-alert" style="display:none"></div>
+
+                      <div class="table-wrap">
+                        <table id="restPlanTable" class="data-table">
+                          <thead><tr><th>员工</th><th>固定休息日</th><th>浮动天数</th><th>备注</th><th class="col-actions">操作</th></tr></thead>
+                          <tbody></tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </div>
+              </section>
+
+              <section id="nightPanel" class="config-panel">
+                <h2 class="card__title">夜班导入</h2>
+                <div class="row row--actions">
+                  <label class="field">
+                    <span class="field__label">月份</span>
+                    <input id="monthNight" type="month" />
+                  </label>
+                  <label class="field field--file">
+                    <span class="field__label">Excel 文件</span>
+                    <input id="nightFile" type="file" accept=".xlsx,.xls" />
+                  </label>
+                  <div class="field field--btn">
+                    <span class="field__label field__label--invisible">操作</span>
+                    <button type="button" class="btn btn--primary" onclick="importNight()">导入夜班表</button>
+                  </div>
+                  <div class="field field--btn">
+                    <span class="field__label field__label--invisible">操作</span>
+                    <button type="button" class="btn btn--ghost" onclick="loadNightShifts()">刷新</button>
+                  </div>
+                </div>
+                <div class="table-wrap">
+                  <table id="nightTable" class="data-table">
+                    <thead><tr><th>月份</th><th>日期</th><th>夜班人员 A</th><th>夜班人员 B</th></tr></thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
+              </section>
             </div>
           </div>
         </section>
@@ -339,62 +337,44 @@
 
       <section id="scheduleTab" class="tab-panel">
         <section class="card card--highlight">
-          <h2 class="card__title">月度排班生成与发布</h2>
-          <p class="card__hint">生成前请确认小组、人员、班次模板、例外规则与夜班基准数据均已更新。</p>
-
+          <h2 class="card__title">生成与核对</h2>
           <div class="row row--actions row--toolbar">
             <label class="field">
               <span class="field__label">排班月份</span>
-              <input id="monthSchedule" type="text" placeholder="YYYY-MM" />
+              <input id="monthSchedule" type="month" />
             </label>
             <div class="field field--btn field--btn-group">
               <span class="field__label field__label--invisible">操作</span>
               <div class="btn-group">
-                <button type="button" class="btn btn--primary" onclick="generateSchedule()">确认无误并生成排班</button>
-                <button type="button" class="btn btn--ghost" onclick="loadSchedule()">查询排班</button>
-                <button type="button" class="btn btn--accent" onclick="exportSchedule()">导出排班 Excel</button>
+                <button type="button" class="btn btn--primary" onclick="generateSchedule()">生成排班</button>
+                <button type="button" class="btn btn--ghost" onclick="loadSchedule()">查询结果</button>
+                <button type="button" class="btn btn--accent" onclick="exportSchedule()">导出 Excel</button>
               </div>
             </div>
           </div>
 
           <div id="generateSummary" class="summary-panel">
-            <div class="summary-panel__item">
-              <span class="summary-panel__label">当前小组</span>
-              <strong id="summaryGroup">未选择</strong>
-            </div>
-            <div class="summary-panel__item">
-              <span class="summary-panel__label">员工数</span>
-              <strong id="summaryEmployees">0</strong>
-            </div>
-            <div class="summary-panel__item">
-              <span class="summary-panel__label">班种数</span>
-              <strong id="summaryPosts">0</strong>
-            </div>
-            <div class="summary-panel__item">
-              <span class="summary-panel__label">特殊规则数</span>
-              <strong id="summaryRules">0</strong>
-            </div>
-            <div class="summary-panel__item">
-              <span class="summary-panel__label">夜班记录数</span>
-              <strong id="summaryNight">0</strong>
-            </div>
+            <div class="summary-panel__item"><span class="summary-panel__label">当前小组</span><strong id="summaryGroup">未选择</strong></div>
+            <div class="summary-panel__item"><span class="summary-panel__label">员工数</span><strong id="summaryEmployees">0</strong></div>
+            <div class="summary-panel__item"><span class="summary-panel__label">班种数</span><strong id="summaryPosts">0</strong></div>
+            <div class="summary-panel__item"><span class="summary-panel__label">日期覆盖</span><strong id="summaryRules">0</strong></div>
+            <div class="summary-panel__item"><span class="summary-panel__label">夜班记录</span><strong id="summaryNight">0</strong></div>
           </div>
         </section>
 
         <section class="card">
-          <h2 class="card__title">排班结果明细</h2>
+          <h2 class="card__title">排班结果</h2>
           <div class="table-wrap table-wrap--tall">
             <table id="scheduleTable" class="data-table">
-              <thead>
-                <tr>
-                  <th>日期</th>
-                  <th>员工</th>
-                  <th>班次</th>
-                </tr>
-              </thead>
+              <thead><tr><th>日期</th><th>员工</th><th>班次</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
+        </section>
+
+        <section class="card" id="remarksCard" style="display:none">
+          <h2 class="card__title">本月备注</h2>
+          <div id="remarksList" class="remarks-list"></div>
         </section>
       </section>
     </main>
