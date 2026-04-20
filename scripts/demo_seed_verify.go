@@ -1,3 +1,6 @@
+//go:build ignore
+// +build ignore
+
 package main
 
 import (
@@ -57,7 +60,9 @@ func main() {
 	fmt.Println("Verification passed: daily post demand matched and night-rest constraints held.")
 }
 
-func resetDemoData(database interface{ Exec(string, ...interface{}) interface{ Error() error } }) error {
+func resetDemoData(database interface {
+	Exec(string, ...interface{}) interface{ Error() error }
+}) error {
 	// use raw SQL for a clean demo reset without touching the main database
 	statements := []string{
 		"DELETE FROM schedule_remarks",
@@ -90,4 +95,3 @@ func seedDemoData(database *db.GormDB) (uint, error) {
 func verifyGeneratedSchedule(database *db.GormDB, groupID uint, items []models.ScheduleEntry) error {
 	panic("placeholder")
 }
-
